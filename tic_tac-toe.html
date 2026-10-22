@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <link rel="stylesheet" href="tic tac toe.css">
+</head>
+<body>
+    <main class="game">
+        <header>
+            <div class="logo">✳</div>
+            <p class="eyebrow">THE CLASSIC GAME</p>
+            <h1>Tic Tac <span>Toe</span></h1>
+            <p class="subtitle">Three in a row. One friendly rivalry.</p>
+        </header>
+
+        <section class="scores">
+            <div class="score x-card">
+                <span>✕ PLAYER X</span>
+                <strong id="scoreX">0</strong>
+                <small>Crosses</small>
+            </div>
+            <div class="score o-card">
+                <span>○ PLAYER O</span>
+                <strong id="scoreO">0</strong>
+                <small>Circles</small>
+            </div>
+        </section>
+
+        <section class="panel">
+            <p id="status">Player X's turn</p>
+
+            <div class="board" id="board">
+                <button class="cell" data-index="0"></button>
+                <button class="cell" data-index="1"></button>
+                <button class="cell" data-index="2"></button>
+                <button class="cell" data-index="3"></button>
+                <button class="cell" data-index="4"></button>
+                <button class="cell" data-index="5"></button>
+                <button class="cell" data-index="6"></button>
+                <button class="cell" data-index="7"></button>
+                <button class="cell" data-index="8"></button>
+            </div>
+
+            <p id="message">Choose an empty square to play.</p>
+
+            <button class="primary" id="newRound">↻ New Round</button>
+            <button class="secondary" id="reset">Reset Game &amp; Scores</button>
+        </section>
+
+        <footer>
+            <p id="serverStatus" aria-live="polite">Connecting to Java server...</p>
+            MADE FOR FRIENDLY COMPETITION ♥
+        </footer>
+    </main>
+
+    <script>
+        fetch("/api/status")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Java server returned ${response.status}`);
+                }
+
+                return response.json();
+            })
+            .then(() => {
+                document.getElementById("serverStatus").textContent = "Java server connected";
+            })
+            .catch(() => {
+                document.getElementById("serverStatus").textContent = "Java server unavailable";
+            });
+    </script>
+
+    <script>
+        const cells = [...document.querySelectorAll(".cell")];
+        const statusText = document.getElementById("status");
+        const message = document.getElementById("message");
+        const scoreX = document.getElementById("scoreX");
+        const scoreO = document.getElementById("scoreO");
+
+        let board = Array(9).fill("");
+        let player = "X";
+        let scores = { X: 0, O: 0 };
+        let gameOver = false;
+
+        const wins = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+
+        cells.forEach((cell, index) => {
+            cell.addEventListener("click", () => play(index));
+        });
+
+        function play(index) {
+            if (gameOver || board[index]) return;
+
+            board[index] = player;
+            cells[index].textContent = player;
+            cells[index].classList.add(player.toLowerCase());
+            cells[index].disabled = true;
+
+            const winningLine = wins.find(line =>
+                line.every(i => board[i] === player)
+            );
+
+            if (winningLine) {
+                gameOver = true;
+                scores[player]++;
+                scoreX.textContent = scores.X;
+                scoreO.textContent = scores.O;
+
+                winningLine.forEach(i =>
+                    cells[i].classList.add("winner")
+                );
+
+                statusText.textContent = `Player ${player} wins! 🎉`;
+                message.textContent = "Congratulations! Start another round.";
+                cells.forEach(c => c.disabled = true);
+                return;
+            }
+
+            if (board.every(value => value !== "")) {
+                gameOver = true;
+                statusText.textContent = "It's a draw! 🤝";
+                message.textContent = "Well played! Try another round.";
+                return;
+            }
+
+            player = player === "X" ? "O" : "X";
+            statusText.textContent = `Player ${player}'s turn`;
+            message.textContent = `It's Player ${player}'s move.`;
+        }
+
+        function newRound() {
+            board = Array(9).fill("");
+            player = "X";
+            gameOver = false;
+
+            cells.forEach(cell => {
+                cell.textContent = "";
+                cell.disabled = false;
+                cell.className = "cell";
+            });
+
+            statusText.textContent = "Player X's turn";
+            message.textContent = "Choose an empty square to play.";
+        }
+
+        document.getElementById("newRound").addEventListener("click", newRound);
+
+        document.getElementById("reset").addEventListener("click", () => {
+            if (!confirm("Reset the board and both scores?")) return;
+
+            scores = { X: 0, O: 0 };
+            scoreX.textContent = "0";
+            scoreO.textContent = "0";
+            newRound();
+        });
+    </script>
+</body>
+</html>
